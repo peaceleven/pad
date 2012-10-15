@@ -23,3 +23,6 @@ $(EXECUTABLE): $(OBJECTS) padmain.o
 
 clean:
 	-rm $(EXECUTABLE) $(OBJECTS) $(DEP_FILES)
+
+TAGS: $(SOURCES)
+	find . -name '*.cpp' -o -name '*.h' | etags - -I --language=c++

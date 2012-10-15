@@ -1,15 +1,19 @@
-SOURCES = padmain.cpp CameraDelegate.h types.h OCRer.h OCRer.cpp CameraManager.h CameraManager.cpp
-OBJECTS = padmain.o OCRer.o CameraManager.o
+SOURCES = CameraDelegate.h types.h OCRer.h OCRer.cpp CameraManager.h CameraManager.cpp
+OBJECTS = OCRer.o CameraManager.o
 DEP_FILES = .deps/*.p
 CXX_FLAGS = -g -Wall
-LIB_FLAGS = -ltesseract -lv4lconvert
+LIB_FLAGS = -ltesseract -lv4lconvert -lm -lopencv_core -lopencv_highgui -lopencv_imgproc
 EXECUTABLE = pad
+TEST = padtest
 
 CXX = c++
 
-all: $(EXECUTABLE)
+all: $(EXECUTABLE) $(TEST)
 
-$(EXECUTABLE): $(OBJECTS)
+$(TEST): $(OBJECTS) padtest.o
+	$(CXX) -o $@ $^ $(CXX_FLAGS) $(LIB_FLAGS)
+
+$(EXECUTABLE): $(OBJECTS) padmain.o
 	$(CXX) -o $@ $^ $(CXX_FLAGS) $(LIB_FLAGS)
 
 -include $(DEP_FILES)

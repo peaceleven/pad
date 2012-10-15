@@ -90,6 +90,5 @@ int main (int argc, char **argv) {
 	delete camera_manager;
 	delete ocrer;
 
-	exit(EXIT_SUCCESS);
-	return 0;
+	return EXIT_SUCCESS;
 }

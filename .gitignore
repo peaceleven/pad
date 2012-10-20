@@ -3,4 +3,6 @@
 .DS_Store
 *.o
 *.p
+TAGS
 pad
+padtest

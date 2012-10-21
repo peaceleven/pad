@@ -1,4 +1,5 @@
 // gcc -o try try.c -lm -lopencv_core -lopencv_highgui -lopencv_imgproc -std=c99
+// use command "./try" for the first run, and "./try An Y thing" for subsequent runs, to save time.
 
 #include <stdio.h>
 #include <opencv/cv.h>
@@ -6,90 +7,111 @@
 
 #define N_IMAGES 10
 
-int main() {
-	IplImage* imgRed[N_IMAGES];
-	IplImage* imgGreen[N_IMAGES];
-	IplImage* imgBlue[N_IMAGES];
 
-	for(int i=0;i<N_IMAGES;i++) {
-		IplImage* img;
-		char filename[8];
-		sprintf(filename, "%d.jpg", (i+1));
-		img = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
-		imgRed[i] = cvCreateImage(cvGetSize(img), 8, 1);
-		imgGreen[i] = cvCreateImage(cvGetSize(img), 8, 1);
-		imgBlue[i] = cvCreateImage(cvGetSize(img), 8, 1);
-		cvSplit(img, imgRed[i], imgGreen[i], imgBlue[i], NULL);
-		cvReleaseImage(&img);
-	}
+int main (int argc, char **argv) {
+	char window_name[] = "try";
+	IplImage *averaged;
+	CvSize imgSize;
+	int jpg_quality = 90;
 
+	if (argc == 1) {
 
-	CvSize imgSize = cvGetSize(imgRed[0]);
-	IplImage *imgResultRed = cvCreateImage(imgSize, 8, 1);
-	IplImage *imgResultGreen = cvCreateImage(imgSize, 8, 1);
-	IplImage *imgResultBlue = cvCreateImage(imgSize, 8, 1);
+		IplImage* imgReds[N_IMAGES];
+		IplImage* imgGreens[N_IMAGES];
+		IplImage* imgBlues[N_IMAGES];
 
-	IplImage *imgResult = cvCreateImage(imgSize, 8, 3);
-
-	for(int y=0;y<imgSize.height;y++) {
-		for(int x=0;x<imgSize.width;x++) {
-			int theSumRed=0;
-			int theSumGreen=0;
-			int theSumBlue=0;
-			for(int i=0;i<N_IMAGES;i++) {
-				theSumRed+=cvGetReal2D(imgRed[i], y, x);
-				theSumGreen+=cvGetReal2D(imgGreen[i], y, x);
-				theSumBlue+=cvGetReal2D(imgBlue[i], y, x);
-			}
-			theSumRed = (float)theSumRed / N_IMAGES;
-			theSumGreen = (float)theSumGreen / N_IMAGES;
-			theSumBlue = (float)theSumBlue / N_IMAGES;
-			cvSetReal2D(imgResultRed, y, x, theSumRed);
-			cvSetReal2D(imgResultGreen, y, x, theSumGreen);
-			cvSetReal2D(imgResultBlue, y, x, theSumBlue);
+		for (int i=0;i<N_IMAGES;i++) {
+			IplImage* img;
+			char filename[8];
+			sprintf(filename, "%d.jpg", (i+1));
+			img = cvLoadImage(filename, CV_LOAD_IMAGE_COLOR);
+			imgReds[i] = cvCreateImage(cvGetSize(img), 8, 1);
+			imgGreens[i] = cvCreateImage(cvGetSize(img), 8, 1);
+			imgBlues[i] = cvCreateImage(cvGetSize(img), 8, 1);
+			cvSplit(img, imgReds[i], imgGreens[i], imgBlues[i], NULL);
+			cvReleaseImage(&img);
 		}
+
+		imgSize = cvGetSize(imgReds[0]);
+		averaged = cvCreateImage(imgSize, 8, 3);
+		IplImage *imgRedsSum   = cvCreateImage(imgSize, 8, 1);
+		IplImage *imgGreensSum = cvCreateImage(imgSize, 8, 1);
+		IplImage *imgBluesSum  = cvCreateImage(imgSize, 8, 1);
+
+		for (int y = 0; y < imgSize.height; y++) {
+			for (int x = 0; x < imgSize.width; x++) {
+				double sumRed   = 0.0f;
+				double sumGreen = 0.0f;
+				double sumBlue  = 0.0f;
+
+				for (int i = 0; i < N_IMAGES; i++) {
+					sumRed   += cvGetReal2D(imgReds[i], y, x);
+					sumGreen += cvGetReal2D(imgGreens[i], y, x);
+					sumBlue  += cvGetReal2D(imgBlues[i], y, x);
+				}
+				sumRed   /= N_IMAGES;
+				sumGreen /= N_IMAGES;
+				sumBlue  /= N_IMAGES;
+				cvSetReal2D(imgRedsSum, y, x, sumRed);
+				cvSetReal2D(imgGreensSum, y, x, sumGreen);
+				cvSetReal2D(imgBluesSum, y, x, sumBlue);
+			}
+		}
+		cvMerge(imgRedsSum, imgGreensSum, imgBluesSum, NULL, averaged);
+		cvSaveImage("averaged.jpg", averaged, &jpg_quality);
 	}
 
-	char window_name[] = "averaged";
-	cvMerge(imgResultRed, imgResultGreen, imgResultBlue, NULL, imgResult);
-	cvNamedWindow(window_name, CV_WINDOW_AUTOSIZE);
-	cvShowImage(window_name, imgResult);
+	else {
+		averaged = cvLoadImage("averaged.jpg", CV_LOAD_IMAGE_COLOR);
+		imgSize = cvGetSize(averaged);
+	}
 
+	cvNamedWindow(window_name, CV_WINDOW_AUTOSIZE);
+	cvShowImage(window_name, averaged);
+	printf("Showing \"averaged\" image. Going to blur it. Press any key to continue...\n");
 	cvWaitKey(0);
+
 
 	int neighborhood = 3;
 	double offset = 3.6;
 
-	// for (int i=0; i<N_IMAGES; i++) {
-		cvSmooth( imgResult, imgResult, CV_GAUSSIAN, 3, 0, 0, 0 );
-		cvShowImage(window_name, imgResult);
-		cvWaitKey(0);
+	cvSmooth(averaged, averaged, CV_GAUSSIAN, 3, 0, 0, 0);
+	cvShowImage(window_name, averaged);
+	printf("Showing blurred image. Going to do adaptive thresholding. Press any key to continue...\n");
+	cvWaitKey(0);
 
-		IplImage *a = cvCreateImage(imgSize, imgResult->depth, 1);
-		cvCvtColor(imgResult, a, CV_RGB2GRAY);
+	IplImage *gray = cvCreateImage(imgSize, averaged->depth, 1);
+	cvCvtColor(averaged, gray, CV_RGB2GRAY);
 
-		IplImage *b = cvCreateImage(imgSize, imgResult->depth, 1);
-
-		cvAdaptiveThreshold(a,
-		                    b,
-		                    (double) 255,
-		                    CV_ADAPTIVE_THRESH_GAUSSIAN_C,
-		                    CV_THRESH_BINARY, neighborhood, offset);
-		cvShowImage(window_name, b);
-		cvWaitKey(0);
-	// 	neighborhood += 2;
-		int quality = 90;
-		cvSaveImage("thres.jpg", b, &quality);
-		cvReleaseImage(&b);
-	// }
-
+	IplImage *thres = cvCreateImage(imgSize, averaged->depth, 1);
 
 	char k;
 	while (1) {
+		cvAdaptiveThreshold(gray, thres,
+		                    255.0f,
+		                    CV_ADAPTIVE_THRESH_GAUSSIAN_C,
+		                    CV_THRESH_BINARY, neighborhood, offset);
+		cvShowImage(window_name, thres);
+
+		printf("Now adjust neighborhood and offset with i, o, -, =.\n");
 		k = cvWaitKey(0);
-		if (k == 'q')
+		if (k == '-')
+			offset -= 0.1;
+		else if (k == '=')
+			offset += 0.1;
+		else if (k == 'i') {
+			if (neighborhood != 3)
+				neighborhood -= 2;
+		}
+		else if (k == 'o')
+			neighborhood += 2;
+		else if (k == 'q')
 			break;
+
+		printf("neighborhood = %d, offset = %G\n", neighborhood, offset);
 	}
 
+	cvSaveImage("thres.jpg", thres, &jpg_quality);
+	cvReleaseImage(&thres);
 	return 0;
 }

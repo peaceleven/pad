@@ -3,10 +3,12 @@
 
 #include <iostream>
 #include <tesseract/baseapi.h>
+#include <tesseract/resultiterator.h>
 #include "CameraDelegate.h"
 
 namespace pad {
 	using namespace std;
+	using namespace tesseract;
 
 	class OCRer : public CameraDelegate {
 	public:
@@ -17,7 +19,7 @@ namespace pad {
 		                   int left, int top, int width, int height);
 
 	private:
-		tesseract::TessBaseAPI     *_tess;
+		tesseract::TessBaseAPI     *_tessapi;
 	};
 }
 #endif

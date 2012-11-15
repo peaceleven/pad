@@ -2,6 +2,7 @@
 #define OCRER_H
 
 #include <iostream>
+#include <set>
 #include <tesseract/baseapi.h>
 #include <tesseract/resultiterator.h>
 #include "CameraDelegate.h"
@@ -19,7 +20,9 @@ namespace pad {
 		                   int left, int top, int width, int height);
 
 	private:
-		tesseract::TessBaseAPI     *_tessapi;
+		TessBaseAPI       *_tessapi;
+		set<string>        _dict_words;
+		set<string>        _live_words;
 	};
 }
 #endif

@@ -87,10 +87,10 @@ void OCRer::process_image(Mat img) {
 		_average_img = img;
 
 	} else {
-		// detect motion by comparing with _average_img (or _last_img?)
+		// detect motion by comparing with _last_img
 		vector<uchar> status;
 		vector<float> err;
-		calcImageDisplacement(_average_img, img, &status, &err);
+		calcImageDisplacement(_last_img, img, &status, &err);
 
 		float avg_error = 0;
 		int n = 0;
@@ -107,8 +107,18 @@ void OCRer::process_image(Mat img) {
 			_motion = true;
 
 		else if (_n_imgs < MAX_N_IMGS) {
+			float alpha = 1.0f / (float) (_n_imgs + 1);
+			Mat sum = Mat::zeros(img.size(), CV_32F);       // has to be CV_32F or CV_64F
+
+			accumulate(img, sum);
+			accumulate(_average_img, sum);
+			sum.convertTo(_average_img, _average_img.type(), alpha);
+		}
+		else {
+			return ;
 		}
 	}
+	_last_img = img;
 	_n_imgs++;
 
 

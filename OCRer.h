@@ -32,6 +32,7 @@ namespace pad {
 		set<string>        _dict_words;
 		set<string>        _live_words;
 		Mat       _average_img;
+		Mat       _last_img;
 		int       _n_imgs;
 		bool      _motion;
 	};

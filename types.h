@@ -8,7 +8,7 @@ enum io_method {
 };
 
 struct buffer {
-	void*	start;
-	size_t	length;
+	void   *start;
+	size_t  length;
 };
 #endif

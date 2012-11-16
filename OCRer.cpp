@@ -73,9 +73,18 @@ void calcImageDisplacement(Mat img1, Mat img2, vector<uchar> *status, vector<flo
 	                     (*status), (*err), winSize, maxLevel);
 }
 
-void OCRer::process_image(const unsigned char *img_data, int bytes_per_pixel, int bytes_per_line, int left, int top, int width, int height) {
+
+// @param img_data: in YUYV format (e.g. read from camera).
+void OCRer::process_image(unsigned char *img_data, int bytes_per_pixel, int bytes_per_line, int left, int top, int width, int height) {
+	Mat yuyv (height, width, CV_8UC3, img_data, bytes_per_line);
+	Mat gray;
+	cvtColor(yuyv, gray, CV_YUV2RGB);
+	cvtColor(gray, gray, CV_RGB2GRAY);
+	gray.adjustROI(top, height, left, width);
+	process_image(gray);
 }
 
+// @param img: grayscaled and in RGB format (e.g. loaded from file).
 void OCRer::process_image(Mat img) {
 	if (_motion) {
 		_n_imgs = 0;

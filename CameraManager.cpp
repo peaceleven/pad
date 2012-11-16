@@ -80,27 +80,25 @@ void CameraManager::open_and_init_device () {
 	MEM_ZERO (cropcap);
 	cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-if (-1 == ioctl (_video_fd, VIDIOC_CROPCAP, &cropcap))
-	errno_exit("VIDIOC_CROPCAP");
-
-// crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-// crop.c = cropcap.defrect;
+	if (-1 == ioctl (_video_fd, VIDIOC_CROPCAP, &cropcap))
+		errno_exit("VIDIOC_CROPCAP");
 
 	MEM_ZERO(_crop_rect);
 	_crop_rect.width = cropcap.defrect.width; // 1920;
-	cout << "width" << _crop_rect.width;
+	cout << "crop.width = " << _crop_rect.width << endl;
 	_crop_rect.height = cropcap.defrect.height; //1080;
-	cout << "height" << _crop_rect.height;
+	cout << "crop.height = " << _crop_rect.height << endl;
 
-	MEM_ZERO ( _src_fmt);
-	MEM_ZERO (_dest_fmt);
+	MEM_ZERO(_src_fmt);
 	_src_fmt.type                   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	_src_fmt.fmt.pix.width          = _crop_rect.width;
 	_src_fmt.fmt.pix.height         = _crop_rect.height;
 	_src_fmt.fmt.pix.field          = V4L2_FIELD_INTERLACED;
-    _src_fmt.fmt.pix.pixelformat    = V4L2_PIX_FMT_YUYV;
-    _dest_fmt = _src_fmt;
-    _dest_fmt.fmt.pix.pixelformat    = V4L2_PIX_FMT_RGB24;
+	_src_fmt.fmt.pix.pixelformat    = V4L2_PIX_FMT_YUYV;
+
+	MEM_ZERO(_dst_fmt);
+	_dst_fmt = _src_fmt;
+	_dst_fmt.fmt.pix.pixelformat    = V4L2_PIX_FMT_RGB24;
 
 	// VIDIOC_S_FMT may change width and height.
 	if (-1 == ioctl (_video_fd, VIDIOC_S_FMT, &_src_fmt))
@@ -176,34 +174,41 @@ void CameraManager::start_capturing () {
 
 
 void CameraManager::mainloop () {
-	// unsigned int count = 100;
+	// read 100 frames for demo.
+	unsigned int n_frames = 100;
 
-	// while (count-- > 0) {
-	// 	while (1) {
-			fd_set fds;
-			struct timeval tv;
-			int r;
+	fd_set fds;
+	FD_ZERO(&fds);
+	FD_SET(_video_fd, &fds);
 
-			FD_ZERO (&fds);
-			FD_SET (_video_fd, &fds);
+	int r;
+	unsigned char* raw_img;
 
-			/* Timeout. */
-			tv.tv_sec = 2;
-			tv.tv_usec = 0;
+	while (n_frames > 0) {
 
-			r = select (_video_fd + 1, &fds, NULL, NULL, &tv);
+		// wait for I/O readiness forever
+		r = select (_video_fd + 1, &fds, NULL, NULL, NULL);
 
-			if (-1 == r && EINTR != errno)
-				errno_exit ("select()");
+		if (-1 == r && EINTR != errno)
+			errno_exit ("select()");
 
-			if (0 == r) {
-				cerr << "select timeout" << endl;
-				exit (EXIT_FAILURE);
-			}
+		if (0 == r) {
+			cerr << "select() timeout" << endl;
+			continue;
+			// exit(EXIT_FAILURE);
+		}
 
-			read_frame ();
-	// 	}
-	// }
+		raw_img = read_frame();
+		n_frames--;
+
+		for (vector<CameraDelegate*>::iterator it = _camera_delegates.begin();
+		     it < _camera_delegates.end(); ++it) {
+			(*it)->process_image(raw_img,
+			                     _src_fmt.fmt.pix.bytesperline/_src_fmt.fmt.pix.width,
+			                     _src_fmt.fmt.pix.bytesperline,
+			                     _crop_rect.left, _crop_rect.top, _crop_rect.width, _crop_rect.height);
+		}
+	}
 }
 
 void CameraManager::stop_capturing () {
@@ -261,9 +266,9 @@ void CameraManager::add_camera_delegate(CameraDelegate *cd) {
 
 
 
-int CameraManager::read_frame () {
+unsigned char* CameraManager::read_frame () {
 	struct v4l2_buffer buf;
-	const unsigned char *raw_img;
+	unsigned char *raw_img;
 
 	int img_size;
 	unsigned int u;
@@ -283,7 +288,7 @@ int CameraManager::read_frame () {
 				errno_exit ("read()");
 			}
 		}
-		raw_img = (const unsigned char *) _buffers[0].start;
+		raw_img = (unsigned char *) _buffers[0].start;
 		break;
 
 	case IO_METHOD_MMAP:
@@ -305,7 +310,7 @@ int CameraManager::read_frame () {
 		}
 
 		assert (buf.index < _num_buffers);
-		raw_img = (const unsigned char *) _buffers[buf.index].start;
+		raw_img = (unsigned char *) _buffers[buf.index].start;
 
 		if (-1 == ioctl (_video_fd, VIDIOC_QBUF, &buf))
 			errno_exit ("VIDIOC_QBUF");
@@ -336,7 +341,7 @@ int CameraManager::read_frame () {
 				break;
 
 		assert (u < _num_buffers);
-		raw_img = (const unsigned char *) buf.m.userptr;
+		raw_img = (unsigned char *) buf.m.userptr;
 
 		if (-1 == ioctl (_video_fd, VIDIOC_QBUF, &buf))
 			errno_exit ("VIDIOC_QBUF");
@@ -344,24 +349,18 @@ int CameraManager::read_frame () {
 		break;
 	}
 
+	/*
 	if (v4lconvert_convert(_v4lconvert_data,
 	                       &_src_fmt,
-	                       &_dest_fmt,
+	                       &_dst_fmt,
 	                       (unsigned char*) _buffers[buf.index].start, buf.bytesused,
-	                       _converted_img_buffer, _dest_fmt.fmt.pix.sizeimage) < 0) {
+	                       _converted_img_buffer, _dst_fmt.fmt.pix.sizeimage) < 0) {
 		if (errno != EAGAIN)
 			errno_exit("v4lconvert_convert()");
 	}
+	*/
 
-	for (vector<CameraDelegate*>::iterator it = _camera_delegates.begin();
-	     it < _camera_delegates.end(); ++it) {
-	     (*it)->process_image(raw_img,
-	                          _src_fmt.fmt.pix.bytesperline/_src_fmt.fmt.pix.width,
-	                          _src_fmt.fmt.pix.bytesperline,
-	                          _crop_rect.left, _crop_rect.top, _src_fmt.fmt.pix.width, _src_fmt.fmt.pix.height);
-	}
-
-	return 1;
+	return raw_img;
 }
 
 void CameraManager::init_read (unsigned int buffer_size) {

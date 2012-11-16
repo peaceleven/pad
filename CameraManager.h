@@ -56,14 +56,14 @@ namespace pad {
 		int                         _period;
 		struct v4lconvert_data     *_v4lconvert_data;
 		struct v4l2_format          _src_fmt;
-		struct v4l2_format          _dest_fmt;
+		struct v4l2_format          _dst_fmt;
 		unsigned char              *_converted_img_buffer;
 		vector<CameraDelegate*>     _camera_delegates;
 
-		int  read_frame();
 		void init_read(unsigned int buffer_size);
 		void init_mmap();
 		void init_userp(unsigned int buffer_size);
+		unsigned char* read_frame();
 	};
 }
 #endif

@@ -2,7 +2,7 @@ SOURCES = CameraDelegate.h types.h OCRer.h OCRer.cpp CameraManager.h CameraManag
 OBJECTS = OCRer.o CameraManager.o
 DEP_FILES = .deps/*.p
 CXX_FLAGS = -g -Wall
-LIB_FLAGS = -ltesseract -lv4lconvert -lm -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_video
+LIB_FLAGS = -ltesseract -lm -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_video
 EXECUTABLE = pad
 TEST = padtest
 

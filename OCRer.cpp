@@ -5,6 +5,7 @@ namespace pad {
 OCRer::OCRer() {
 	_n_imgs = 0;
 	_motion = false;
+	_last_n_features = -1;
 
 	char tessdata_path[] = "/usr/local/share/";
 	setenv("TESSDATA_PREFIX", tessdata_path, 1);
@@ -53,13 +54,8 @@ bool heuristic(char *s) {
 }
 
 void calcImageDisplacement(Mat img1, Mat img2, vector<uchar> *status, vector<float> *err) {
-
 	vector<Point2f> corners1, corners2;
-
-	int maxCorners = 200;
-	double qualityLevel = .2f;
-	double minDistance = 4.f;
-	goodFeaturesToTrack(img1, corners1, maxCorners, qualityLevel, minDistance);
+	goodFeaturesToTrack(img1, corners1, N_CORNERS, FEATURE_QUALITY, MIN_DISTANCE);
 
 	int nIterations = 30;
 	double epislon = .01f;
@@ -101,18 +97,21 @@ void OCRer::process_image(Mat img) {
 		vector<float> err;
 		calcImageDisplacement(_last_img, img, &status, &err);
 
-		float avg_error = 0;
 		int n = 0;
-		for (unsigned int i = 0; i < status.size(); i++) {
+		int l = status.size();
+		for (int i = 0; i < l; i++) {
 			bool matched = (bool) status[i];
 			if (matched) {
-				avg_error += err[i];
 				n++;
 			}
 		}
 
-		avg_error /= (float) n;
-		if (avg_error > MOTION_THRESHOLD)
+		float fn  = (float) n;
+		float fnl = (float) _last_n_features;
+		float p_motion = fabs( (fn - fnl)  / fnl );          // "percentage" of motion
+
+		_last_n_features = n;
+		if (p_motion > MOTION_P_THRESHOLD)
 			_motion = true;
 
 		else if (_n_imgs < MAX_N_IMGS) {

@@ -11,7 +11,13 @@
 #include "CameraDelegate.h"
 
 #define MAX_N_IMGS 10                       // max number of images to average
-#define MOTION_THRESHOLD 140.0f
+// next 3 related to feature extraction
+#define FEATURE_QUALITY .2f                 // feature points (corners) with quality measure <
+                                            // 0.2 * (best corner's quality measure) are rejected
+#define N_CORNERS 200                       // max number of features (corners) to look for in images
+#define MIN_DISTANCE 4.f                    // min possible Euclidean distance between the corners
+#define MOTION_P_THRESHOLD .2f              // if >20% features are not found in the next image, consider motion
+
 
 namespace pad {
 	using namespace std;
@@ -34,6 +40,7 @@ namespace pad {
 		Mat       _average_img;
 		Mat       _last_img;
 		int       _n_imgs;
+		int       _last_n_features;
 		bool      _motion;
 	};
 }

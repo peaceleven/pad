@@ -72,10 +72,32 @@ void calcImageDisplacement(Mat img1, Mat img2, vector<uchar> *status, vector<flo
 
 // @param img_data: in YUYV format (e.g. read from camera).
 void OCRer::process_image(unsigned char *img_data, int bytes_per_pixel, int bytes_per_line, int left, int top, int width, int height) {
-	Mat yuyv (height, width, CV_8UC3, img_data, bytes_per_line);
+	Mat y (height, width, CV_8UC1);
+	Mat u (height, width, CV_8UC1);
+	Mat v (height, width, CV_8UC1);
+	Mat yuyv (height, width, CV_8UC3);
+
+	int i, j;
+	int n = bytes_per_line * height;
+	for (i = 0, j = 0; j < n; i++, j += 2)
+		y.data[i] = img_data[j];
+
+	for (i = 0, j = 1; j < n; i += 2, j += 4) {
+		u.data[i]   = img_data[j];
+		u.data[i+1] = img_data[j];
+	}
+
+	for (i = 0, j = 3; j < n; i += 2, j += 4) {
+		v.data[i]   = img_data[j];
+		v.data[i+1] = img_data[j];
+	}
+	Mat arr[3] = {y, u, v};
+	merge(arr, 3, yuyv);
+
+	Mat rgb (height, width, CV_8UC3);
 	Mat gray;
-	cvtColor(yuyv, gray, CV_YUV2RGB);
-	cvtColor(gray, gray, CV_RGB2GRAY);
+	cvtColor(yuyv, rgb, CV_YCrCb2RGB);
+	cvtColor(rgb, gray, CV_RGB2GRAY);
 	gray.adjustROI(top, height, left, width);
 	process_image(gray);
 }

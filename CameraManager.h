@@ -54,10 +54,7 @@ namespace pad {
 		struct buffer              *_buffers;
 		unsigned int                _num_buffers;
 		int                         _period;
-		struct v4lconvert_data     *_v4lconvert_data;
 		struct v4l2_format          _src_fmt;
-		struct v4l2_format          _dst_fmt;
-		unsigned char              *_converted_img_buffer;
 		vector<CameraDelegate*>     _camera_delegates;
 
 		void init_read(unsigned int buffer_size);

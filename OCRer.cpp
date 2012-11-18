@@ -159,43 +159,14 @@ void OCRer::process_image(Mat img) {
 
 	ResultIterator *ri = _tessapi->GetIterator();
 
-	/*
-	ChoiceIterator* ci;
 	if (ri != NULL) {
-		while ((ri->Next(RIL_SYMBOL))) {
-			const char* symbol = ri->GetUTF8Text(RIL_SYMBOL);
-
-			if (symbol != 0) {
-				float conf = ri->Confidence(RIL_SYMBOL);
-				std::cout << "\tnext symbol: " << symbol << "\tconf: " << conf << endl;
-
-				const ResultIterator itr = *ri;
-				ci = new ChoiceIterator(itr);
-
-				do {
-					std::cout << "\t\t" << ci->GetUTF8Text() << " conf: " << ci->Confidence() << endl;
-				} while(ci->Next());
-
-				delete ci;
-			}
-
-			delete[] symbol;
-		}
-	}
-	*/
-
-	if (ri != NULL) {
-		// int l, t, r, b;
 		while (ri->Next(RIL_WORD)) {
-			// ri->BoundingBox(RIL_WORD, &l, &t, &r, &b);
-			// cout << "rect = " << l << ", " << r << ", " << t << ", " << b << endl;
 
 			char *ocr_text = ri->GetUTF8Text(RIL_WORD);
 
 			if (heuristic(ocr_text)) {
 				if (ri->WordIsFromDictionary()) {
 					_dict_words.insert(string(ocr_text));
-					// cout << "conf = " << ri->Confidence(RIL_WORD) << endl;
 
 				} else {
 					_live_words.insert(string(ocr_text));

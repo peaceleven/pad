@@ -96,10 +96,6 @@ void CameraManager::open_and_init_device () {
 	_src_fmt.fmt.pix.field          = V4L2_FIELD_INTERLACED;
 	_src_fmt.fmt.pix.pixelformat    = V4L2_PIX_FMT_YUYV;
 
-	MEM_ZERO(_dst_fmt);
-	_dst_fmt = _src_fmt;
-	_dst_fmt.fmt.pix.pixelformat    = V4L2_PIX_FMT_RGB24;
-
 	// VIDIOC_S_FMT may change width and height.
 	if (-1 == ioctl (_video_fd, VIDIOC_S_FMT, &_src_fmt))
 		errno_exit ("VIDIOC_S_FMT");
@@ -191,12 +187,6 @@ void CameraManager::mainloop () {
 
 		if (-1 == r && EINTR != errno)
 			errno_exit ("select()");
-
-		if (0 == r) {
-			cerr << "select() timeout" << endl;
-			continue;
-			// exit(EXIT_FAILURE);
-		}
 
 		raw_img = read_frame();
 		n_frames--;
@@ -348,17 +338,6 @@ unsigned char* CameraManager::read_frame () {
 
 		break;
 	}
-
-	/*
-	if (v4lconvert_convert(_v4lconvert_data,
-	                       &_src_fmt,
-	                       &_dst_fmt,
-	                       (unsigned char*) _buffers[buf.index].start, buf.bytesused,
-	                       _converted_img_buffer, _dst_fmt.fmt.pix.sizeimage) < 0) {
-		if (errno != EAGAIN)
-			errno_exit("v4lconvert_convert()");
-	}
-	*/
 
 	return raw_img;
 }
